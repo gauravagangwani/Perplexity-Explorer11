@@ -562,14 +562,36 @@ calcBtn.addEventListener("click", async () => {
   let logitsFlat, seqLen, vocabSize;
 
   try {
-    // Build a 2-D int64 tensor of shape [1, seqLen]
+    const len = allIds.length;
+
+    // input_ids — shape [1, seqLen], dtype int64
     const inputTensor = new Tensor(
       "int64",
       BigInt64Array.from(allIds.map(BigInt)),
-      [1, allIds.length]
+      [1, len]
     );
 
-    const output = await model({ input_ids: inputTensor });
+    // attention_mask — all 1s, shape [1, seqLen], dtype int64
+    // Tells the model to attend to every token (no padding to ignore)
+    const attMask = new Tensor(
+      "int64",
+      BigInt64Array.from(Array(len).fill(1n)),
+      [1, len]
+    );
+
+    // position_ids — [0, 1, 2, …, seqLen-1], shape [1, seqLen], dtype int64
+    // Gives each token its absolute position in the sequence
+    const posIds = new Tensor(
+      "int64",
+      BigInt64Array.from(Array.from({ length: len }, (_, i) => BigInt(i))),
+      [1, len]
+    );
+
+    const output = await model({
+      input_ids:      inputTensor,
+      attention_mask: attMask,
+      position_ids:   posIds,
+    });
 
     // output.logits.dims = [1, seqLen, vocabSize]
     logitsFlat = output.logits.data;    // flat Float32Array
